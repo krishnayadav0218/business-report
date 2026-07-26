@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Report Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --navy: #1B2A4A;
+    --teal: #2E9E8F;
+    --coral: #E4622C;
+    --grey: #8A94A6;
+    --line: #E4E7EC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 12% 8%, rgba(46,158,143,0.07), transparent 45%),
+                       radial-gradient(circle at 88% 92%, rgba(27,42,74,0.06), transparent 45%);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 620px;
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 1px 2px rgba(27,42,74,0.04), 0 24px 48px -24px rgba(27,42,74,0.18);
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--grey);
+    font-size: 14.5px;
+    margin: 0 0 28px;
+    line-height: 1.5;
+  }
+
+  .dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: 14px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    background: #FBFBFC;
+  }
+  .dropzone.drag {
+    border-color: var(--teal);
+    background: rgba(46,158,143,0.05);
+  }
+  .dropzone.has-file {
+    border-style: solid;
+    border-color: var(--teal);
+  }
+  .dz-icon {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .dz-hint {
+    font-size: 12.5px;
+    color: var(--grey);
+  }
+  #file-input { display: none; }
+
+  .options {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 2px 24px;
+    font-size: 14px;
+    color: var(--navy);
+  }
+  .options input { width: 16px; height: 16px; accent-color: var(--teal); }
+
+  button.primary {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: var(--navy);
+    color: white;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+  button.primary:hover:not(:disabled) { background: #24365c; }
+  button.primary:active:not(:disabled) { transform: scale(0.99); }
+  button.primary:disabled { background: var(--grey); cursor: not-allowed; opacity: 0.6; }
+
+  .readout {
+    display: none;
+    margin-top: 24px;
+    background: var(--navy);
+    border-radius: 14px;
+    padding: 20px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 2;
+  }
+  .readout.show { display: block; }
+  .rline { color: #6C7C9E; display: flex; align-items: center; gap: 10px; }
+  .rline .mark { width: 14px; display: inline-block; text-align: center; }
+  .rline.active { color: #EAF3F1; }
+  .rline.active .mark { color: var(--teal); animation: pulse 1s ease-in-out infinite; }
+  .rline.complete { color: #EAF3F1; }
+  .rline.complete .mark { color: var(--teal); }
+  .rline.failed { color: #FFC9B3; }
+  .rline.failed .mark { color: var(--coral); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .result {
+    display: none;
+    margin-top: 20px;
+    text-align: center;
+  }
+  .result.show { display: block; }
+  .result a {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 11px 22px;
+    background: var(--teal);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .result p { color: var(--grey); font-size: 13.5px; margin-bottom: 10px; }
+
+  .error-box {
+    display: none;
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: #FFF3EE;
+    border: 1px solid #FBD5C2;
+    border-radius: 10px;
+    color: #A6431A;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .error-box.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <p class="eyebrow">$ report --generate</p>
+  <h1>Business Report Generator</h1>
+  <p class="sub">Upload today's Excel or CSV. It's cleaned, charted, and turned into a PowerPoint automatically — then emailed if you want.</p>
+
+  <form id="upload-form">
+    <div class="dropzone" id="dropzone">
+      <div class="dz-icon" id="dz-text">Click to choose a file, or drag it here</div>
+      <div class="dz-hint" id="dz-hint">.xlsx, .xls, or .csv — any column layout</div>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+    </div>
+
+    <label class="options">
+      <input type="checkbox" id="send-email" checked>
+      Email the report to the configured recipients
+    </label>
+
+    <button type="submit" class="primary" id="submit-btn" disabled>Generate Report</button>
+  </form>
+
+  <div class="readout" id="readout">
+    <div class="rline" data-step="reading"><span class="mark">○</span> Reading your file</div>
+    <div class="rline" data-step="cleaning"><span class="mark">○</span> Cleaning data &amp; detecting columns</div>
+    <div class="rline" data-step="charting"><span class="mark">○</span> Building charts</div>
+    <div class="rline" data-step="building"><span class="mark">○</span> Assembling the PowerPoint</div>
+    <div class="rline" data-step="emailing"><span class="mark">○</span> Sending email</div>
+  </div>
+
+  <div class="error-box" id="error-box"></div>
+
+  <div class="result" id="result">
+    <p>Your report is ready.</p>
+    <a id="download-link" href="#">Download PowerPoint</a>
+  </div>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+const dzText = document.getElementById('dz-text');
+const submitBtn = document.getElementById('submit-btn');
+const form = document.getElementById('upload-form');
+const readout = document.getElementById('readout');
+const errorBox = document.getElementById('error-box');
+const result = document.getElementById('result');
+const downloadLink = document.getElementById('download-link');
+const sendEmailCheckbox = document.getElementById('send-email');
+
+let selectedFile = null;
+const STEP_ORDER = ['reading', 'cleaning', 'charting', 'building', 'emailing'];
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) setFile(fileInput.files[0]); });
+
+function setFile(file) {
+  selectedFile = file;
+  dropzone.classList.add('has-file');
+  dzText.textContent = file.name;
+  document.getElementById('dz-hint').textContent = 'Ready to generate';
+  submitBtn.disabled = false;
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!selectedFile) return;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Processing…';
+  errorBox.classList.remove('show');
+  result.classList.remove('show');
+  readout.classList.add('show');
+  document.querySelectorAll('.rline').forEach(el => el.className = 'rline');
+  if (!sendEmailCheckbox.checked) {
+    document.querySelector('[data-step="emailing"]').style.display = 'none';
+  } else {
+    document.querySelector('[data-step="emailing"]').style.display = 'flex';
+  }
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  formData.append('send_email', sendEmailCheckbox.checked);
+
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) { showError(data.error); return; }
+    pollStatus(data.job_id);
+  } catch (err) {
+    showError('Could not reach the server. Is it still running?');
+  }
+});
+
+function markStep(step, state) {
+  const el = document.querySelector(`[data-step="${step}"]`);
+  if (!el) return;
+  el.className = 'rline ' + state;
+  el.querySelector('.mark').textContent = state === 'complete' ? '✓' : (state === 'failed' ? '✕' : '●');
+}
+
+async function pollStatus(jobId) {
+  let lastStep = null;
+  const interval = setInterval(async () => {
+    const res = await fetch(`/status/${jobId}`);
+    const data = await res.json();
+
+    if (data.step && data.step !== lastStep) {
+      const currentIdx = STEP_ORDER.indexOf(data.step);
+      STEP_ORDER.forEach((s, i) => {
+        if (i < currentIdx) markStep(s, 'complete');
+      });
+      markStep(data.step, 'active');
+      lastStep = data.step;
+    }
+
+    if (data.status === 'done') {
+      clearInterval(interval);
+      STEP_ORDER.forEach(s => markStep(s, 'complete'));
+      downloadLink.href = data.download_url;
+      result.classList.add('show');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Generate Report';
+    } else if (data.status === 'error') {
+      clearInterval(interval);
+      if (lastStep) markStep(lastStep, 'failed');
+      showError(data.error || 'Something went wrong.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Generate Report';
+    }
+  }, 1200);
+}
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.classList.add('show');
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Generate Report';
+}
+</script>
+
+</body>
+</html>
