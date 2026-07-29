@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Report Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --navy: #1B2A4A;
+    --teal: #2E9E8F;
+    --coral: #E4622C;
+    --grey: #8A94A6;
+    --line: #E4E7EC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 12% 8%, rgba(46,158,143,0.07), transparent 45%),
+                       radial-gradient(circle at 88% 92%, rgba(27,42,74,0.06), transparent 45%);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--navy);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 20px; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 32px 36px;
+    box-shadow: 0 1px 2px rgba(27,42,74,0.04), 0 24px 48px -24px rgba(27,42,74,0.18);
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--grey);
+    font-size: 14px;
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+  .card-sub { color: var(--grey); font-size: 13px; margin: 0 0 18px; line-height: 1.5; }
+
+  .dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: 14px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    background: #FBFBFC;
+  }
+  .dropzone.drag { border-color: var(--teal); background: rgba(46,158,143,0.05); }
+  .dropzone.has-file { border-style: solid; border-color: var(--teal); }
+  .dz-icon { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 4px; }
+  .dz-hint { font-size: 12.5px; color: var(--grey); }
+  #file-input { display: none; }
+
+  .options { display: flex; align-items: center; gap: 10px; margin: 20px 2px 24px; font-size: 14px; color: var(--navy); }
+  .options input { width: 16px; height: 16px; accent-color: var(--teal); }
+
+  button.primary {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: var(--navy); color: white;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 15px;
+    cursor: pointer; transition: transform 0.1s ease, background 0.15s ease;
+  }
+  button.primary:hover:not(:disabled) { background: #24365c; }
+  button.primary:active:not(:disabled) { transform: scale(0.99); }
+  button.primary:disabled { background: var(--grey); cursor: not-allowed; opacity: 0.6; }
+
+  .readout {
+    display: none; margin-top: 22px; background: var(--navy); border-radius: 14px;
+    padding: 20px 22px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 2;
+  }
+  .readout.show { display: block; }
+  .rline { color: #6C7C9E; display: flex; align-items: center; gap: 10px; }
+  .rline .mark { width: 14px; display: inline-block; text-align: center; }
+  .rline.active { color: #EAF3F1; }
+  .rline.active .mark { color: var(--teal); animation: pulse 1s ease-in-out infinite; }
+  .rline.complete { color: #EAF3F1; }
+  .rline.complete .mark { color: var(--teal); }
+  .rline.failed { color: #FFC9B3; }
+  .rline.failed .mark { color: var(--coral); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .result { display: none; margin-top: 18px; text-align: center; }
+  .result.show { display: block; }
+  .result a {
+    display: inline-block; margin-top: 4px; padding: 11px 22px;
+    background: var(--teal); color: white; text-decoration: none; border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 14px;
+  }
+  .result p { color: var(--grey); font-size: 13.5px; margin-bottom: 10px; }
+
+  .error-box {
+    display: none; margin-top: 16px; padding: 14px 16px; background: #FFF3EE;
+    border: 1px solid #FBD5C2; border-radius: 10px; color: #A6431A; font-size: 13.5px; line-height: 1.5;
+  }
+  .error-box.show { display: block; }
+
+  /* Recipients */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; min-height: 20px; }
+  .chip {
+    display: flex; align-items: center; gap: 8px; background: #F0F4F3;
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 8px 6px 14px; font-size: 13px;
+  }
+  .chip button {
+    background: none; border: none; color: var(--grey); cursor: pointer; font-size: 15px;
+    line-height: 1; padding: 2px 4px; border-radius: 50%;
+  }
+  .chip button:hover { color: var(--coral); background: #FFE9E0; }
+  .chip-empty { color: var(--grey); font-size: 13px; font-style: italic; }
+
+  .add-row { display: flex; gap: 8px; }
+  .add-row input[type="email"] {
+    flex: 1; padding: 11px 14px; border: 1.5px solid var(--line); border-radius: 10px;
+    font-size: 14px; font-family: inherit;
+  }
+  .add-row input[type="email"]:focus { outline: none; border-color: var(--teal); }
+  .add-row button {
+    padding: 0 18px; border: none; border-radius: 10px; background: var(--teal); color: white;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 14px; cursor: pointer;
+  }
+
+  /* Schedule */
+  .switch-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .switch-label { font-size: 14px; font-weight: 500; }
+  .switch { position: relative; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0; background: var(--line);
+    border-radius: 999px; transition: 0.15s;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
+    background: white; border-radius: 50%; transition: 0.15s;
+  }
+  .switch input:checked + .slider { background: var(--teal); }
+  .switch input:checked + .slider::before { transform: translateX(20px); }
+
+  .time-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .time-row input[type="time"] {
+    padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font-size: 14px; font-family: inherit;
+  }
+  .time-row input[type="time"]:disabled { opacity: 0.5; }
+  .time-row button {
+    padding: 10px 16px; border: none; border-radius: 10px; background: var(--navy); color: white;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 13.5px; cursor: pointer;
+  }
+
+  .status-line { font-size: 12.5px; color: var(--grey); line-height: 1.7; }
+  .status-line strong { color: var(--navy); font-weight: 600; }
+  .status-warn { color: var(--coral); }
+  .save-msg { font-size: 12.5px; color: var(--teal); margin-top: 8px; display: none; }
+  .save-msg.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="eyebrow">$ report --generate</p>
+      {% if app_locked %}<a href="/logout" style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--grey); text-decoration:none; padding:4px 10px; border:1px solid var(--line); border-radius:999px;">Log out</a>{% endif %}
+    </div>
+    <h1>Business Report Generator</h1>
+    <p class="sub">Upload today's Excel, CSV, PDF, or Word file. It's cleaned, charted, and turned into a PowerPoint automatically — then emailed if you want.</p>
+
+    <form id="upload-form">
+      <div class="dropzone" id="dropzone">
+        <div class="dz-icon" id="dz-text">Click to choose a file, or drag it here</div>
+        <div class="dz-hint" id="dz-hint">.xlsx, .xls, .csv, .pdf, or .docx — any column layout</div>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.pdf,.docx">
+      </div>
+
+      <label class="options">
+        <input type="checkbox" id="send-email" checked>
+        Email the report to the recipients below
+      </label>
+
+      <button type="submit" class="primary" id="submit-btn" disabled>Generate Report</button>
+    </form>
+
+    <div class="readout" id="readout">
+      <div class="rline" data-step="reading"><span class="mark">○</span> Reading your file</div>
+      <div class="rline" data-step="cleaning"><span class="mark">○</span> Cleaning data &amp; detecting columns</div>
+      <div class="rline" data-step="charting"><span class="mark">○</span> Building charts</div>
+      <div class="rline" data-step="building"><span class="mark">○</span> Assembling the PowerPoint</div>
+      <div class="rline" data-step="emailing"><span class="mark">○</span> Sending email</div>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+    <div class="result" id="result">
+      <p>Your report is ready.</p>
+      <a id="download-link" href="#">Download PowerPoint</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Recipients</h2>
+    <p class="card-sub">Everyone in this list gets the report — for both manual and automatic sends.</p>
+    <div class="chip-row" id="chip-row"></div>
+    <div class="add-row">
+      <input type="email" id="email-input" placeholder="name@company.com">
+      <button id="add-email-btn">Add</button>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--line);">
+      <button id="toggle-bulk-btn" style="background:none; border:none; color:var(--teal); font-family:'Space Grotesk',sans-serif; font-weight:500; font-size:13px; cursor:pointer; padding:0;">+ Add multiple at once / import</button>
+
+      <div id="bulk-section" style="display:none; margin-top:14px;">
+        <p class="card-sub" style="margin-bottom:8px;">Paste a list of emails (comma, space, or one-per-line — copy straight from Excel or Outlook), or import a .txt/.csv file.</p>
+        <textarea id="bulk-textarea" rows="4" placeholder="alice@company.com, bob@company.com&#10;charlie@company.com" style="width:100%; padding:11px 14px; border:1.5px solid var(--line); border-radius:10px; font-size:13.5px; font-family:'JetBrains Mono',monospace; resize:vertical; margin-bottom:10px;"></textarea>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="bulk-add-btn" style="padding:9px 16px; border:none; border-radius:10px; background:var(--teal); color:white; font-family:'Space Grotesk',sans-serif; font-weight:500; font-size:13px; cursor:pointer;">Add All</button>
+          <label style="padding:9px 16px; border:1.5px solid var(--line); border-radius:10px; font-family:'Space Grotesk',sans-serif; font-weight:500; font-size:13px; cursor:pointer; color:var(--navy);">
+            Import file
+            <input type="file" id="import-file-input" accept=".txt,.csv" style="display:none;">
+          </label>
+          <button id="copy-all-btn" style="padding:9px 16px; border:1.5px solid var(--line); border-radius:10px; background:white; color:var(--navy); font-family:'Space Grotesk',sans-serif; font-weight:500; font-size:13px; cursor:pointer;">Copy All</button>
+        </div>
+        <div class="save-msg" id="bulk-msg" style="margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Automatic Daily Sending</h2>
+    <p class="card-sub">When on, this sends a fresh report every day at the chosen time using the most recently uploaded file — no manual step needed.</p>
+
+    <div class="switch-row">
+      <span class="switch-label">Send automatically every day</span>
+      <label class="switch">
+        <input type="checkbox" id="schedule-toggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="time-row">
+      <input type="time" id="schedule-time" value="09:00">
+      <button id="save-schedule-btn">Save</button>
+      <span class="save-msg" id="save-msg">Saved ✓</span>
+    </div>
+
+    <div class="status-line" id="schedule-status">Loading status…</div>
+  </div>
+
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+const dzText = document.getElementById('dz-text');
+const submitBtn = document.getElementById('submit-btn');
+const form = document.getElementById('upload-form');
+const readout = document.getElementById('readout');
+const errorBox = document.getElementById('error-box');
+const result = document.getElementById('result');
+const downloadLink = document.getElementById('download-link');
+const sendEmailCheckbox = document.getElementById('send-email');
+
+let selectedFile = null;
+const STEP_ORDER = ['reading', 'cleaning', 'charting', 'building', 'emailing'];
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) setFile(fileInput.files[0]); });
+
+function setFile(file) {
+  selectedFile = file;
+  dropzone.classList.add('has-file');
+  dzText.textContent = file.name;
+  document.getElementById('dz-hint').textContent = 'Ready to generate';
+  submitBtn.disabled = false;
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!selectedFile) return;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Processing…';
+  errorBox.classList.remove('show');
+  result.classList.remove('show');
+  readout.classList.add('show');
+  document.querySelectorAll('.rline').forEach(el => el.className = 'rline');
+  document.querySelector('[data-step="emailing"]').style.display = sendEmailCheckbox.checked ? 'flex' : 'none';
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  formData.append('send_email', sendEmailCheckbox.checked);
+
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) { showError(data.error); return; }
+    pollStatus(data.job_id);
+  } catch (err) {
+    showError('Could not reach the server. Is it still running?');
+  }
+});
+
+function markStep(step, state) {
+  const el = document.querySelector(`[data-step="${step}"]`);
+  if (!el) return;
+  el.className = 'rline ' + state;
+  el.querySelector('.mark').textContent = state === 'complete' ? '✓' : (state === 'failed' ? '✕' : '●');
+}
+
+async function pollStatus(jobId) {
+  let lastStep = null;
+  const interval = setInterval(async () => {
+    const res = await fetch(`/status/${jobId}`);
+    const data = await res.json();
+
+    if (data.step && data.step !== lastStep) {
+      const currentIdx = STEP_ORDER.indexOf(data.step);
+      STEP_ORDER.forEach((s, i) => { if (i < currentIdx) markStep(s, 'complete'); });
+      markStep(data.step, 'active');
+      lastStep = data.step;
+    }
+
+    if (data.status === 'done') {
+      clearInterval(interval);
+      STEP_ORDER.forEach(s => markStep(s, 'complete'));
+      downloadLink.href = data.download_url;
+      result.classList.add('show');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Generate Report';
+      loadSchedule();
+    } else if (data.status === 'error') {
+      clearInterval(interval);
+      if (lastStep) markStep(lastStep, 'failed');
+      showError(data.error || 'Something went wrong.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Generate Report';
+    }
+  }, 1200);
+}
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.classList.add('show');
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Generate Report';
+}
+
+// ---- Recipients ----
+const chipRow = document.getElementById('chip-row');
+const emailInput = document.getElementById('email-input');
+const addEmailBtn = document.getElementById('add-email-btn');
+
+function renderChips(recipients) {
+  chipRow.innerHTML = '';
+  if (!recipients.length) {
+    chipRow.innerHTML = '<span class="chip-empty">No recipients yet — add one below.</span>';
+    return;
+  }
+  recipients.forEach(email => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span>${email}</span><button title="Remove">×</button>`;
+    chip.querySelector('button').addEventListener('click', () => removeRecipient(email));
+    chipRow.appendChild(chip);
+  });
+}
+
+async function loadRecipients() {
+  const res = await fetch('/recipients');
+  const data = await res.json();
+  renderChips(data.recipients || []);
+}
+
+async function addRecipient() {
+  const email = emailInput.value.trim();
+  if (!email) return;
+  const res = await fetch('/recipients', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'add', email })
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  renderChips(data.recipients);
+  emailInput.value = '';
+}
+
+async function removeRecipient(email) {
+  const res = await fetch('/recipients', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'remove', email })
+  });
+  const data = await res.json();
+  renderChips(data.recipients);
+}
+
+addEmailBtn.addEventListener('click', addRecipient);
+emailInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addRecipient(); } });
+
+// ---- Bulk add / import / export ----
+const toggleBulkBtn = document.getElementById('toggle-bulk-btn');
+const bulkSection = document.getElementById('bulk-section');
+const bulkTextarea = document.getElementById('bulk-textarea');
+const bulkAddBtn = document.getElementById('bulk-add-btn');
+const bulkMsg = document.getElementById('bulk-msg');
+const importFileInput = document.getElementById('import-file-input');
+const copyAllBtn = document.getElementById('copy-all-btn');
+
+toggleBulkBtn.addEventListener('click', () => {
+  const isHidden = bulkSection.style.display === 'none';
+  bulkSection.style.display = isHidden ? 'block' : 'none';
+  toggleBulkBtn.textContent = isHidden ? '− Hide bulk add' : '+ Add multiple at once / import';
+});
+
+function showBulkMsg(text, isError) {
+  bulkMsg.textContent = text;
+  bulkMsg.style.color = isError ? 'var(--coral)' : 'var(--teal)';
+  bulkMsg.classList.add('show');
+  setTimeout(() => bulkMsg.classList.remove('show'), 4000);
+}
+
+async function bulkAddFromText(text) {
+  if (!text.trim()) return;
+  const res = await fetch('/recipients', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'bulk_add', text })
+  });
+  const data = await res.json();
+  if (data.error) { showBulkMsg(data.error, true); return; }
+  renderChips(data.recipients);
+  const addedCount = (data.added || []).length;
+  const skippedCount = (data.skipped || []).length;
+  let msg = `Added ${addedCount} email${addedCount === 1 ? '' : 's'}.`;
+  if (skippedCount) msg += ` Skipped ${skippedCount} that didn't look like valid emails.`;
+  showBulkMsg(msg, skippedCount > 0 && addedCount === 0);
+}
+
+bulkAddBtn.addEventListener('click', async () => {
+  await bulkAddFromText(bulkTextarea.value);
+  bulkTextarea.value = '';
+});
+
+importFileInput.addEventListener('change', async () => {
+  const file = importFileInput.files[0];
+  if (!file) return;
+  const text = await file.text();
+  await bulkAddFromText(text);
+  importFileInput.value = '';
+});
+
+copyAllBtn.addEventListener('click', async () => {
+  const res = await fetch('/recipients');
+  const data = await res.json();
+  const text = (data.recipients || []).join(', ');
+  if (!text) { showBulkMsg('No recipients to copy yet.', true); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    showBulkMsg('Copied all recipients to clipboard.', false);
+  } catch (err) {
+    showBulkMsg(text, false); // fallback: show inline if clipboard access is blocked
+  }
+});
+
+// ---- Schedule ----
+const scheduleToggle = document.getElementById('schedule-toggle');
+const scheduleTime = document.getElementById('schedule-time');
+const saveScheduleBtn = document.getElementById('save-schedule-btn');
+const saveMsg = document.getElementById('save-msg');
+const scheduleStatus = document.getElementById('schedule-status');
+
+async function loadSchedule() {
+  const res = await fetch('/schedule');
+  const data = await res.json();
+  scheduleToggle.checked = data.enabled;
+  scheduleTime.value = data.time;
+  scheduleTime.disabled = !data.enabled;
+  renderScheduleStatus(data);
+}
+
+function renderScheduleStatus(data) {
+  let lines = [];
+  if (data.enabled) {
+    if (!data.has_source_file) {
+      lines.push('<span class="status-warn">⚠ No file uploaded yet — upload one manually first so there\'s something to send.</span>');
+    } else if (data.next_run) {
+      lines.push(`Next automatic send: <strong>${data.next_run}</strong>`);
+    }
+  } else {
+    lines.push('Automatic sending is off.');
+  }
+  if (data.last_run_at) {
+    const statusText = (data.last_run_status || '').startsWith('error') ? `<span class="status-warn">${data.last_run_status}</span>` : (data.last_run_status || '');
+    lines.push(`Last run: <strong>${data.last_run_at}</strong> — ${statusText}`);
+  }
+  scheduleStatus.innerHTML = lines.join('<br>');
+}
+
+scheduleToggle.addEventListener('change', () => { scheduleTime.disabled = !scheduleToggle.checked; });
+
+saveScheduleBtn.addEventListener('click', async () => {
+  const res = await fetch('/schedule', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: scheduleToggle.checked, time: scheduleTime.value })
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  saveMsg.classList.add('show');
+  setTimeout(() => saveMsg.classList.remove('show'), 2000);
+  loadSchedule();
+});
+
+loadRecipients();
+loadSchedule();
+</script>
+
+</body>
+</html>
