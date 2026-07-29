@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Report Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --navy: #1B2A4A;
+    --navy-deep: #12203A;
+    --teal: #2E9E8F;
+    --coral: #E4622C;
+    --grey: #8A94A6;
+    --line: #E4E7EC;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--navy);
+    overflow: hidden;
+  }
+
+  .layout {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---- Left: 3D scene panel ---- */
+  .scene-panel {
+    position: relative;
+    flex: 1.15;
+    background: linear-gradient(160deg, var(--navy-deep) 0%, var(--navy) 60%, #223a63 100%);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .scene-panel canvas { display: block; width: 100%; height: 100%; }
+  .scene-caption {
+    position: absolute;
+    left: 40px;
+    bottom: 40px;
+    right: 40px;
+    color: rgba(255,255,255,0.82);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+  }
+  .scene-caption strong { color: #7FD9CB; }
+
+  /* ---- Right: login card panel ---- */
+  .form-panel {
+    flex: 1;
+    min-width: 380px;
+    max-width: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: var(--bg);
+  }
+  .card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 38px 36px;
+    box-shadow: 0 1px 2px rgba(27,42,74,0.04), 0 24px 48px -24px rgba(27,42,74,0.18);
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 23px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  p.sub { color: var(--grey); font-size: 13.5px; margin: 0 0 24px; line-height: 1.5; }
+
+  .field { margin-bottom: 16px; }
+  input[type="password"] {
+    width: 100%;
+    padding: 13px 15px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input[type="password"]:focus {
+    outline: none;
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(46,158,143,0.14);
+  }
+  button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: var(--navy);
+    color: white;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 14.5px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease;
+  }
+  button:hover { background: #24365c; }
+  button:active { transform: scale(0.98); }
+  .error {
+    color: var(--coral);
+    font-size: 13px;
+    margin: -4px 0 14px;
+  }
+
+  @media (max-width: 860px) {
+    .layout { flex-direction: column; }
+    .scene-panel { flex: none; height: 46vh; }
+    .form-panel { flex: none; min-width: 0; max-width: none; flex: 1; }
+    .scene-caption { left: 24px; right: 24px; bottom: 20px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <div class="scene-panel" id="scene-panel">
+    <div class="scene-caption" id="scene-caption">Your Excel, CSV, PDF, or Word file &rarr; <strong>cleaned, charted, and packed into a report</strong> automatically.</div>
+  </div>
+  <div class="form-panel">
+    <div class="card" id="login-card">
+      <p class="eyebrow">$ auth --verify</p>
+      <h1>Business Report Generator</h1>
+      <p class="sub">Enter the access password to continue.</p>
+      <form method="POST">
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <div class="field">
+          <input type="password" name="password" placeholder="Password" autofocus>
+        </div>
+        <button type="submit">Continue</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+// ---------------------------------------------------------------------
+// Entrance motion (GSAP)
+// ---------------------------------------------------------------------
+if (window.gsap) {
+  gsap.fromTo('#login-card', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out', delay: 0.15 });
+  gsap.fromTo('#scene-caption', { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power2.out', delay: 0.9 });
+}
+
+// ---------------------------------------------------------------------
+// 3D cartoon mascot scene (Three.js) -- a friendly little "report bot"
+// with a mini bar-chart on its chest, orbited by floating chart bars.
+// Pure procedural geometry (no external model files), lightweight enough
+// to run smoothly even on modest laptops.
+// ---------------------------------------------------------------------
+(function() {
+  const panel = document.getElementById('scene-panel');
+  if (!window.THREE) return; // fail quietly if CDN blocked -- gradient bg still looks fine
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, panel.clientWidth / panel.clientHeight, 0.1, 100);
+  camera.position.set(0, 0.4, 7.5);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(panel.clientWidth, panel.clientHeight);
+  panel.appendChild(renderer.domElement);
+
+  // Lighting -- soft key + fill for a friendly toon-ish look
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(3, 4, 5);
+  scene.add(key);
+  const fill = new THREE.PointLight(0x7fd9cb, 0.6, 20);
+  fill.position.set(-4, -2, 3);
+  scene.add(fill);
+
+  const COLORS = { navy: 0x24365c, teal: 0x2e9e8f, tealLight: 0x7fd9cb, coral: 0xe4622c, white: 0xf4f5f7, grey: 0x8a94a6 };
+
+  const mascot = new THREE.Group();
+  scene.add(mascot);
+
+  // Body: rounded capsule
+  const bodyMat = new THREE.MeshStandardMaterial({ color: COLORS.teal, roughness: 0.55, metalness: 0.05, flatShading: true });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.85, 0.7, 6, 16), bodyMat);
+  mascot.add(body);
+
+  // Chest screen (mini bar chart panel)
+  const screenMat = new THREE.MeshStandardMaterial({ color: COLORS.navy, roughness: 0.5, flatShading: true });
+  const screen = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.75, 0.06), screenMat);
+  screen.position.set(0, 0.05, 0.82);
+  mascot.add(screen);
+
+  const barColors = [COLORS.tealLight, COLORS.coral, COLORS.tealLight];
+  const barHeights = [0.28, 0.5, 0.38];
+  barHeights.forEach((h, i) => {
+    const bar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, h, 0.05),
+      new THREE.MeshStandardMaterial({ color: barColors[i], flatShading: true })
+    );
+    bar.position.set(-0.25 + i * 0.25, -0.18 + h / 2, 0.87);
+    mascot.add(bar);
+  });
+
+  // Head
+  const headMat = new THREE.MeshStandardMaterial({ color: COLORS.navy, roughness: 0.5, flatShading: true });
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 20), headMat);
+  head.position.set(0, 1.15, 0);
+  head.scale.set(1, 0.92, 0.95);
+  mascot.add(head);
+
+  // Eyes (white base + pupil), stored for blink animation
+  const eyeGroup = new THREE.Group();
+  [-0.24, 0.24].forEach((x) => {
+    const eyeWhite = new THREE.Mesh(
+      new THREE.SphereGeometry(0.15, 12, 12),
+      new THREE.MeshStandardMaterial({ color: COLORS.white, roughness: 0.3 })
+    );
+    eyeWhite.position.set(x, 1.2, 0.52);
+    const pupil = new THREE.Mesh(
+      new THREE.SphereGeometry(0.075, 12, 12),
+      new THREE.MeshStandardMaterial({ color: 0x14202e, roughness: 0.2 })
+    );
+    pupil.position.set(x, 1.2, 0.63);
+    eyeGroup.add(eyeWhite, pupil);
+  });
+  mascot.add(eyeGroup);
+
+  // Antenna
+  const antenna = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.02, 0.4, 8),
+    new THREE.MeshStandardMaterial({ color: COLORS.grey })
+  );
+  antenna.position.set(0, 1.75, 0);
+  mascot.add(antenna);
+  const antennaTip = new THREE.Mesh(
+    new THREE.SphereGeometry(0.09, 12, 12),
+    new THREE.MeshStandardMaterial({ color: COLORS.coral, emissive: COLORS.coral, emissiveIntensity: 0.6 })
+  );
+  antennaTip.position.set(0, 1.98, 0);
+  mascot.add(antennaTip);
+
+  mascot.position.set(0.6, -0.3, 0);
+  mascot.scale.set(0.95, 0.95, 0.95);
+
+  // Orbiting mini chart bars -- little floating satellites around the mascot
+  const orbitGroup = new THREE.Group();
+  scene.add(orbitGroup);
+  const satellites = [];
+  const satColors = [COLORS.coral, COLORS.tealLight, COLORS.navy];
+  for (let i = 0; i < 3; i++) {
+    const sat = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.22 + i * 0.1, 0.06),
+      new THREE.MeshStandardMaterial({ color: satColors[i], flatShading: true, roughness: 0.6 })
+    );
+    const radius = 2.3 + i * 0.35;
+    const speed = 0.25 - i * 0.05;
+    const yOffset = 0.4 - i * 0.5;
+    satellites.push({ mesh: sat, radius, speed, yOffset, phase: i * 2.1 });
+    orbitGroup.add(sat);
+  }
+
+  // Faint halo ring
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(2.6, 0.008, 8, 64),
+    new THREE.MeshBasicMaterial({ color: 0x7fd9cb, transparent: true, opacity: 0.25 })
+  );
+  ring.rotation.x = Math.PI / 2.4;
+  ring.position.set(0.6, -0.3, 0);
+  scene.add(ring);
+
+  // Mouse parallax
+  let targetRotY = 0, targetRotX = 0;
+  window.addEventListener('mousemove', (e) => {
+    const nx = (e.clientX / window.innerWidth) * 2 - 1;
+    const ny = (e.clientY / window.innerHeight) * 2 - 1;
+    targetRotY = nx * 0.25;
+    targetRotX = ny * 0.12;
+  });
+
+  const clock = new THREE.Clock();
+  let blinkTimer = 2.5;
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+    const dt = clock.getDelta();
+
+    // idle bob + sway
+    mascot.position.y = -0.3 + Math.sin(t * 1.1) * 0.12;
+    mascot.rotation.y += (targetRotY - mascot.rotation.y) * 0.04;
+    mascot.rotation.x += (targetRotX - mascot.rotation.x) * 0.04;
+    antennaTip.material.emissiveIntensity = 0.5 + Math.sin(t * 3) * 0.25;
+
+    // blink
+    blinkTimer -= dt;
+    if (blinkTimer < 0) {
+      eyeGroup.scale.y = 0.12;
+      if (blinkTimer < -0.12) { eyeGroup.scale.y = 1; blinkTimer = 2 + Math.random() * 3; }
+    }
+
+    // orbiting satellites
+    satellites.forEach((s) => {
+      const angle = t * s.speed + s.phase;
+      s.mesh.position.set(
+        0.6 + Math.cos(angle) * s.radius,
+        s.yOffset + Math.sin(t * 0.8 + s.phase) * 0.2,
+        Math.sin(angle) * s.radius * 0.6 - 1.2
+      );
+      s.mesh.rotation.y = angle;
+    });
+
+    ring.rotation.z += 0.0015;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = panel.clientWidth / panel.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(panel.clientWidth, panel.clientHeight);
+  });
+})();
+</script>
+
+</body>
+</html>
